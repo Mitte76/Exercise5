@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Exercise5.Vehicle
+namespace Exercise5.Vehicles
 {
     public class Car (string registreringsnummer, string color) : Vehicle(color)
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Exercise5.Vehicle
+namespace Exercise5.Vehicles
 {
     public class Vehicle(string color)
     {
