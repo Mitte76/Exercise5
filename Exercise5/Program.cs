@@ -1,51 +1,54 @@
 ﻿using System.Numerics;
+using Exercise5.Facilities;
+using Exercise5.Menus;
 
 namespace Exercise5
 {
     internal class Program
     {
-
-        static void Main(string[] args)
+        static void Main()
         {
-            bool exitProgram = false;
-
             Menu menu = new(
-            [
-                "Show all facilities",
-                "Create new facility",
-                "Load facilities from database",
-                "Save facilities to database",
-                "Exit"
-            ]);
+                "MainMenu:",
+                [
+                    new MenuItem(
+                        "Create facility",
+                        submenu: new Menu(
+                            "Create facility:",
+                            [
+                                new MenuItem(
+                                    "Create garage",
+                                    action: () => CreateFacility(FacilityType.Garage)
+                                ),
+                                new MenuItem("Back"),
+                            ]
+                        )
+                    ),
+                    new MenuItem(
+                        "Create facility2",
+                        submenu: new Menu(
+                            "Create facility:",
+                            [new MenuItem("Test2"), new MenuItem("Back")]
+                        )
+                    ),
+                    new MenuItem(
+                        "Exit",
+                        action: () =>
+                        {
+                            Console.WriteLine("Bye!");
+                        }
+                    ),
+                ],
+                isMainMenu: true
+            );
 
-            while (!exitProgram)
-            {
-                int itemSelected = menu.ShowMenu();
-
-                exitProgram = HandleSelection(itemSelected);
-
-                Console.WriteLine($"Item selected = {itemSelected}");
-                Console.ReadKey();
-            }
-
-
-
+            menu.ShowMenu();
         }
-        static bool HandleSelection(int selectedItem)
+
+        static void CreateFacility(FacilityType type)
         {
-
-            switch (selectedItem)
-            {
-                case 0:
-                    return true;
-                default:
-                    return false;
-
-            }
-
+            Console.WriteLine("How many spaces in tha garage?");
+            string? spaces = Console.ReadLine();
         }
-
-
-
     }
 }

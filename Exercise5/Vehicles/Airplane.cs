@@ -4,7 +4,5 @@ using System.Text;
 
 namespace Exercise5.Vehicles
 {
-    internal class Airplane
-    {
-    }
+    internal class Airplane { }
 }

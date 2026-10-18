@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Exercise5.Garage
+namespace Exercise5.Facilities
 {
-    internal class Hangar
-    {
-    }
+    internal class MCGarage { }
 }
