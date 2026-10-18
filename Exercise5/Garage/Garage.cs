@@ -18,7 +18,7 @@ namespace Exercise5.Garage
         }
 
         public int OccupiedSpots => vehicles.Count(v => v != null);
-        public void resizeCapacity(int newCapacity)
+        public void ResizeCapacity(int newCapacity)
         {
             if (OccupiedSpots > newCapacity)
             {
