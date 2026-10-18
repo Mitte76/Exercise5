@@ -6,7 +6,7 @@ namespace Exercise5.Facilities
 {
     public enum FacilityType
     {
-        BoatDock,
+        Marina,
         Garage,
         Hangar,
         MCGarage,

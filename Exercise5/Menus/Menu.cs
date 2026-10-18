@@ -1,56 +1,69 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Exercise5.Menus
 {
-    public class Menu(string menuName, MenuItem[] menuItems, bool isMainMenu = false)
+    public class Menu(string menuName, Func<MenuItem[]> menuItems, bool isMainMenu = false)
     {
         private readonly string _menuName = menuName;
-        private readonly MenuItem[] _items = menuItems;
+
+        private readonly Func<MenuItem[]> _items = menuItems;
+
         private readonly bool _isMainMenu = isMainMenu;
 
-        private int returnValue = 1;
-        int currentItem = 0;
         private string currentInput = "";
 
         public bool ShowMenu()
         {
+            int selectedIndex = 0;
+
             while (true)
             {
-                ShowMainMenu();
-                ConsoleKeyInfo input = Console.ReadKey(true);
+                MenuItem[] items = _items();
+                ShowMainMenu(items, selectedIndex);
 
-                if (HandleInput(input))
+                if (HandleInput(Console.ReadKey(true), items, selectedIndex, out selectedIndex))
                 {
-                    if (returnValue == -1)
+                    if (selectedIndex == -1)
                         return false;
 
-                    MenuItem selected = _items[returnValue];
+                    MenuItem selected = items[selectedIndex];
 
                     if (selected.Submenu != null)
                     {
                         selected.Submenu.ShowMenu();
                         continue;
                     }
-                    selected.Action?.Invoke();
-                    return false;
+
+                    if (selected.Action != null)
+                    {
+                        selected.Action.Invoke();
+                        continue;
+                    }
+
+                    if (selected.Submenu == null)
+                        return false;
                 }
             }
         }
 
-        public void ShowMainMenu()
+        public void ShowMainMenu(MenuItem[] items, int selectedIndex)
         {
             Console.Clear();
-            Console.WriteLine(_menuName);
-            Console.WriteLine("----------");
+            Console.ForegroundColor = ConsoleColor.Green;
 
-            for (int i = 0; i < _items.Length; i++)
+            string title = _menuName;
+            string border = new('*', title.Length + 8);
+
+            Console.WriteLine($"{border}\n*   {title}   *\n{border}\n");
+            Console.ResetColor();
+
+            for (int i = 0; i < items.Length; i++)
             {
-                bool selected = i == currentItem;
-                int menuNumber = (i + 1) % _items.Length;
-                PrintMenuItem(menuNumber, _items[i].Text, selected);
+                bool selected = i == selectedIndex;
+                int menuNumber = (i + 1) % items.Length;
+                PrintMenuItem(menuNumber, items[i].Text, selected);
             }
+
             Console.Write(currentInput);
         }
 
@@ -66,20 +79,25 @@ namespace Exercise5.Menus
             Console.WriteLine($"] {text}");
         }
 
-        private bool HandleInput(ConsoleKeyInfo input)
+        private bool HandleInput(
+            ConsoleKeyInfo input,
+            MenuItem[] items,
+            int currentIndex,
+            out int selectedIndex
+        )
         {
+            selectedIndex = currentIndex;
+
             switch (input.Key)
             {
                 case ConsoleKey.DownArrow:
-                    currentItem++;
-                    if (currentItem >= _items.Length)
-                        currentItem = 0;
+                    selectedIndex++;
+                    selectedIndex = (currentIndex + 1) % items.Length;
                     currentInput = "";
                     return false;
                 case ConsoleKey.UpArrow:
-                    currentItem--;
-                    if (currentItem < 0)
-                        currentItem = _items.Length - 1;
+                    selectedIndex--;
+                    selectedIndex = (currentIndex - 1 + items.Length) % items.Length;
                     currentInput = "";
 
                     return false;
@@ -90,7 +108,7 @@ namespace Exercise5.Menus
                 case ConsoleKey.Enter:
                     if (currentInput == "0" && !_isMainMenu)
                     {
-                        returnValue = -1;
+                        selectedIndex = -1;
                         return true;
                     }
 
@@ -98,14 +116,10 @@ namespace Exercise5.Menus
                         currentInput != ""
                         && int.TryParse(currentInput, out int currentNumber)
                         && currentNumber >= 1
-                        && currentNumber <= _items.Length
+                        && currentNumber <= items.Length
                     )
                     {
-                        returnValue = currentNumber - 1;
-                    }
-                    else
-                    {
-                        returnValue = currentItem;
+                        selectedIndex = currentNumber - 1;
                     }
 
                     return true;
@@ -122,11 +136,11 @@ namespace Exercise5.Menus
                     currentInput += input.KeyChar;
                     if (int.TryParse(currentInput, out int current))
                     {
-                        if (current < _items.Length && current >= 0)
-                            currentItem = (current + _items.Length - 1) % _items.Length;
+                        if (current < items.Length && current >= 0)
+                            selectedIndex = (current + items.Length - 1) % items.Length;
                         else
                         {
-                            currentItem = 0;
+                            selectedIndex = 0;
                             currentInput = "";
                         }
                     }
@@ -136,12 +150,5 @@ namespace Exercise5.Menus
                     return false;
             }
         }
-    }
-
-    public class MenuItem(string text, Menu? submenu = null, Action? action = null)
-    {
-        public string Text { get; } = text;
-        public Menu? Submenu { get; } = submenu;
-        public Action? Action { get; } = action;
     }
 }
