@@ -4,12 +4,11 @@ using System.Text;
 
 namespace Exercise5.Facilities
 {
-    internal class Marina(string name, int parkingSpots) : Facility(name, parkingSpots)
+    internal class Marina(string name, int capacity) : Garage(name, capacity)
     {
-        public override void PrintAvailableSlots()
+        public override string PrintAvailableSlots()
         {
-            Console.WriteLine($"there are {base.AvailableSlots} slots available in the marina");
-            Console.ReadKey();
+            return $"there are {base.AvailableSlots} slots available in the marina";
         }
     }
 }

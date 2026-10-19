@@ -4,5 +4,11 @@ using System.Text;
 
 namespace Exercise5.Facilities
 {
-    internal class Hangar { }
+    internal class Hangar(string name, int capacity) : Garage(name, capacity)
+    {
+        public override string PrintAvailableSlots()
+        {
+            return $"there are {base.AvailableSlots} slots available in the Hangar";
+        }
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Exercise5.Menus
 {
@@ -11,15 +12,17 @@ namespace Exercise5.Menus
         private readonly bool _isMainMenu = isMainMenu;
 
         private string currentInput = "";
+        private string? _message;
 
-        public bool ShowMenu()
+        public async Task<bool> ShowMenu()
         {
             int selectedIndex = 0;
 
             while (true)
             {
                 MenuItem[] items = _items();
-                ShowMainMenu(items, selectedIndex);
+                ShowMainMenu(items, selectedIndex, _message);
+                _message = null;
 
                 if (HandleInput(Console.ReadKey(true), items, selectedIndex, out selectedIndex))
                 {
@@ -30,14 +33,23 @@ namespace Exercise5.Menus
 
                     if (selected.Submenu != null)
                     {
-                        selected.Submenu.ShowMenu();
+                        await selected.Submenu.ShowMenu();
                         continue;
                     }
 
                     if (selected.Action != null)
                     {
-                        selected.Action.Invoke();
-                        continue;
+                        _message = selected.Action.Invoke();
+                        if (!selected.BackOutWhenDone)
+                            continue;
+                    }
+
+                    if (selected.TaskAction != null)
+                    {
+                        _message = await selected.TaskAction();
+
+                        if (!selected.BackOutWhenDone)
+                            continue;
                     }
 
                     if (selected.Submenu == null)
@@ -46,7 +58,7 @@ namespace Exercise5.Menus
             }
         }
 
-        public void ShowMainMenu(MenuItem[] items, int selectedIndex)
+        public void ShowMainMenu(MenuItem[] items, int selectedIndex, string? message)
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Green;
@@ -54,7 +66,11 @@ namespace Exercise5.Menus
             string title = _menuName;
             string border = new('*', title.Length + 8);
 
-            Console.WriteLine($"{border}\n*   {title}   *\n{border}\n");
+            Console.WriteLine($"{border}\n*   {title}   *\n{border}");
+
+            Console.ForegroundColor = ConsoleColor.Blue;
+
+            Console.WriteLine($"{message}\n");
             Console.ResetColor();
 
             for (int i = 0; i < items.Length; i++)
@@ -102,7 +118,8 @@ namespace Exercise5.Menus
 
                     return false;
                 case ConsoleKey.Backspace:
-                    currentInput = currentInput[..^1];
+                    if (!string.IsNullOrEmpty(currentInput))
+                        currentInput = currentInput[..^1];
                     return false;
 
                 case ConsoleKey.Enter:

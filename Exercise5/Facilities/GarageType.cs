@@ -4,10 +4,10 @@ using System.Text;
 
 namespace Exercise5.Facilities
 {
-    public enum FacilityType
+    public enum GarageType
     {
         Marina,
-        Garage,
+        CarGarage,
         Hangar,
         MCGarage,
     }
