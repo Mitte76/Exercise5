@@ -8,9 +8,8 @@ namespace Exercise5.Facilities
     {
         public override string PrintAvailableSlots()
         {
-            return $"there are {base.AvailableSlots} slots available in the garage";
-            //Console.WriteLine($"there are {base.AvailableSlots} slots available in the garage");
-            //Console.ReadKey();
+            return $"There are {base.AvailableSlots} slots available in the garage. "
+                + $"{OccupiedSlots} vehicle{(OccupiedSlots == 1 ? "" : "s")} currently parked.";
         }
     }
 }

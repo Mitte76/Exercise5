@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Exercise5.Vehicles
@@ -8,7 +6,7 @@ namespace Exercise5.Vehicles
     [Serializable()]
     public class Car(string registreringsnummer, string color) : Vehicle(color)
     {
-        public string RegistreringsNummer { get; private set; } =
+        public string RegistreringsNummer { get; set; } =
             ValidateRegistrationNumber(registreringsnummer);
 
         public static string ValidateRegistrationNumber(string registratíonNumber)

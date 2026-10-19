@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Exercise5.Facilities;
+using Exercise5.Vehicles;
 
 namespace Exercise5.Data
 {
@@ -112,12 +113,13 @@ namespace Exercise5.Data
                     facilities.Clear();
                     facilities.AddRange(loadedFacilities);
                 }
+
                 return "File loaded successfully.";
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                return "Something went wrong";
+                return $"Something went wrong {ex.Message}";
             }
         }
     }

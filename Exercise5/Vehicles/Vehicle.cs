@@ -1,13 +1,20 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Exercise5.Vehicles
 {
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+    [JsonDerivedType(typeof(Airplane), "Airplane")]
+    [JsonDerivedType(typeof(Boat), "Boat")]
+    [JsonDerivedType(typeof(Bus), "Bus")]
+    [JsonDerivedType(typeof(Car), "Car")]
+    [JsonDerivedType(typeof(Motorcycle), "Motorcycle")]
     public class Vehicle(string color)
     {
-        private int Weight { get; set; }
-        private int Seats { get; set; }
-        private string Color { get; set; } = IsValidColor(color);
+        public int Weight { get; set; }
+        public int Seats { get; set; }
+        public string Color { get; set; } = IsValidColor(color);
 
         private static string IsValidColor(string color)
         {

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Serialization;
 using Exercise5.Vehicles;
 
@@ -19,7 +17,13 @@ namespace Exercise5.Facilities
             .Range(0, capacity)
             .Select(_ => new ParkingSpot())
             .ToArray();
-        public ParkingSpot[] ParkingSpots => parkingSpots;
+
+        [JsonInclude]
+        public ParkingSpot[] ParkingSpots
+        {
+            get => parkingSpots;
+            private set => parkingSpots = value;
+        }
         public int OccupiedSlots => ParkingSpots.Count(p => p.IsOccupied);
         public int AvailableSlots => ParkingSpots.Count(p => !p.IsOccupied);
 
