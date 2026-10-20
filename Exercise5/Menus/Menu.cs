@@ -36,10 +36,26 @@ namespace Exercise5.Menus
                         return false;
 
                     MenuItem selected = items[selectedIndex];
+                    Menu? submenu;
 
-                    if (selected.Submenu != null)
+                    if (selected.SubmenuFactory != null)
                     {
-                        await selected.Submenu.ShowMenu();
+                        submenu = selected.SubmenuFactory();
+
+                        if (submenu == null)
+                        {
+                            selectedIndex = 0;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        submenu = selected.Submenu;
+                    }
+
+                    if (submenu != null)
+                    {
+                        await submenu.ShowMenu();
                         selectedIndex = 0;
                         continue;
                     }
@@ -79,12 +95,19 @@ namespace Exercise5.Menus
             string border = new('*', title.Length + 8);
 
             Console.WriteLine($"{border}\n*   {title}   *\n{border}");
-            if (extra != null)
-                Console.WriteLine($"\n{extra}");
 
+            if (extra != null)
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine($"\n{extra}");
+            }
             Console.ForegroundColor = ConsoleColor.Blue;
 
-            Console.WriteLine($"{message}\n");
+            if (message != null)
+                Console.WriteLine($"{message}");
+            else
+                Console.WriteLine();
+
             Console.ResetColor();
             if (items != null)
                 for (int i = 0; i < items.Length; i++)

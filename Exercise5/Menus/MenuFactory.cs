@@ -30,7 +30,7 @@ namespace Exercise5.Menus
             {
                 list.Add(
                     new MenuItem(
-                        $"{facility.Name} ({facility.GetType().Name})",
+                        $"{facility.Name} ({facility.GetType().Name}) (Available: {facility.AvailableSlots}/{facility.Capacity})",
                         submenu: FacilityMenu(facility)
                     )
                 );
@@ -41,28 +41,333 @@ namespace Exercise5.Menus
             return [.. list];
         }
 
-        private static Menu FacilityMenu(Garage garage)
+        private Menu FacilityMenu(Garage garage)
         {
             return new Menu(() => $"Garage: {garage.Name}", () => GarageSubMenus(garage));
         }
 
-        private static MenuItem[] GarageSubMenus(Garage garage)
+        private MenuItem[] GarageSubMenus(Garage garage)
         {
-            string vehicleTypes = string.Join(" / ", garage.VehicleTypes);
+            string vehicleTypes = string.Join("/", garage.VehicleTypes);
+            MenuItem parkVehicle =
+                garage.VehicleTypes.Length == 1
+                    ? new MenuItem(
+                        $"Park {vehicleTypes}",
+                        action: () => ParkVehicle(garage, garage.VehicleTypes[0])
+                    )
+                    : new MenuItem($"Park {vehicleTypes}", submenu: ParkVehicle(garage));
 
             return
             [
-                new MenuItem("Check Availability", action: () => garage.PrintAvailableSlots()),
-                new MenuItem($"Get {vehicleTypes}", submenu: GetVehicle(garage)),
                 new MenuItem(
-                    $"Park {string.Join(" / ", garage.VehicleTypes)}",
-                    submenu: ParkVehicle(garage)
+                    "Show vehicle type count",
+                    action: () => PrintVehicleTypeCounts(garage)
                 ),
+                new MenuItem($"Find {vehicleTypes}", submenu: GetVehicle(garage)),
+                parkVehicle,
                 new MenuItem("Back"),
             ];
         }
 
+        private static string PrintVehicleTypeCounts(Garage garage)
+        {
+            StringBuilder result = new();
+
+            foreach (KeyValuePair<VehicleType, int> count in garage.GetVehicleTypeCounts())
+            {
+                result.AppendLine($"{count.Key}: {count.Value}");
+            }
+
+            return result.ToString().TrimEnd();
+        }
+
         private static Menu GetVehicle(Garage garage)
+        {
+            return new Menu(
+                () => "Find Vehicle",
+                () =>
+                {
+                    var vehicles = new List<MenuItem>()
+                    {
+                        new MenuItem("List all vehicles", submenu: GetAllVehicles(garage)),
+                        new MenuItem("Search for vehicle", submenu: SearchVehicleMenu(garage)),
+                    };
+
+                    return [.. vehicles, new MenuItem("Back")];
+                }
+            );
+        }
+
+        private static Menu SearchVehicleMenu(Garage garage)
+        {
+            return new Menu(
+                () => "Search Vehicle",
+                () =>
+                {
+                    var vehicles = new List<MenuItem>()
+                    {
+                        new MenuItem(
+                            "Search by Licence plate",
+                            submenuFactory: () => SearchByPlate(garage)
+                        ),
+                        new MenuItem(
+                            "Search by multiple chriteria",
+                            submenuFactory: () => SearchByCriteria(garage)
+                        ),
+                    };
+
+                    return [.. vehicles, new MenuItem("Back")];
+                }
+            );
+        }
+
+        private static Menu? SearchByPlate(Garage garage)
+        {
+            Console.WriteLine("Enter license plate. Leave empty to cancel.");
+
+            string licensePlate = (Console.ReadLine() ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(licensePlate))
+                return null;
+
+            try
+            {
+                licensePlate = Vehicle.ValidateLicensePlateNumber(licensePlate);
+            }
+            catch (ArgumentException exception)
+            {
+                return new Menu(
+                    () => "Invalid License Plate",
+                    () => [new MenuItem("Back")],
+                    extra: () => exception.Message
+                );
+            }
+
+            return new Menu(() => "Found Vehicles", () => SearchResults(garage, licensePlate));
+        }
+
+        private static MenuItem[] SearchResults(Garage garage, string licensePlate)
+        {
+            var vehicles = new List<MenuItem>();
+
+            foreach (ParkingSpot spot in garage.ParkingSpots)
+            {
+                if (spot.Vehicle is not Vehicle vehicle)
+                    continue;
+
+                bool isMatch = vehicle switch
+                {
+                    Car car => garage.VehicleTypes.Contains(VehicleType.Car)
+                        && car.LicensePlateNumber.Equals(
+                            licensePlate,
+                            StringComparison.OrdinalIgnoreCase
+                        ),
+                    Bus bus => garage.VehicleTypes.Contains(VehicleType.Bus)
+                        && bus.LicensePlateNumber.Equals(
+                            licensePlate,
+                            StringComparison.OrdinalIgnoreCase
+                        ),
+                    Motorcycle motorcycle => garage.VehicleTypes.Contains(VehicleType.Motorcycle)
+                        && motorcycle.LicensePlateNumber.Equals(
+                            licensePlate,
+                            StringComparison.OrdinalIgnoreCase
+                        ),
+                    _ => false,
+                };
+
+                if (!isMatch)
+                    continue;
+
+                vehicles.Add(
+                    new MenuItem(
+                        $"{vehicle.Brand} ({vehicle.GetType().Name})",
+                        submenu: EditVehicle(spot)
+                    )
+                );
+            }
+
+            //if (vehicles.Count == 0)
+            //    vehicles.Add(new MenuItem("No matching vehicles found"));
+
+            vehicles.Add(new MenuItem("Back"));
+
+            return [.. vehicles];
+        }
+
+        private static Menu SearchByCriteria(Garage garage)
+        {
+            var criterias = new Dictionary<string, string>();
+
+            string[] availableCriteria =
+            [
+                "Brand",
+                "Color",
+                "LicensePlateNumber",
+                "FuelType",
+                "CylinderVolume",
+                "Length",
+                "NumberOfEngines",
+            ];
+            string input = "";
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine(
+                    """
+                    Enter criteria as Criterion: Value.
+                    Leave an empty line to start search.
+                    """
+                );
+
+                if (criterias.Count > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("\nSelected criterias:");
+                    foreach (var criteria in criterias)
+                    {
+                        Console.WriteLine($"{criteria.Key}: {criteria.Value}");
+                    }
+                    Console.ResetColor();
+                }
+
+                string criterion = input.Split(':')[0].Trim();
+
+                string[] suggestions = availableCriteria
+                    .Where(c => c.StartsWith(criterion, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+
+                Console.WriteLine("\nAvailable criteria:");
+
+                foreach (string suggestion in suggestions)
+                {
+                    bool isSelected = input.StartsWith(
+                        suggestion + ": ",
+                        StringComparison.OrdinalIgnoreCase
+                    );
+
+                    Console.ForegroundColor = isSelected ? ConsoleColor.Green : ConsoleColor.Gray;
+
+                    Console.Write(suggestion + " ");
+                }
+
+                Console.WriteLine();
+
+                Console.ResetColor();
+
+                Console.Write(input);
+                ConsoleKeyInfo key = Console.ReadKey(true);
+                if (key.Key == ConsoleKey.Backspace && input.Length > 0)
+                {
+                    input = input[..^1];
+                }
+                else if (!char.IsControl(key.KeyChar))
+                {
+                    input += key.KeyChar;
+                }
+                else if (key.Key == ConsoleKey.Enter)
+                {
+                    if (input.Length == 0)
+                        break;
+                    string[] parts = input.Split(':', 2);
+
+                    if (
+                        parts.Length == 2
+                        && !string.IsNullOrWhiteSpace(parts[0])
+                        && !string.IsNullOrWhiteSpace(parts[1])
+                    )
+                    {
+                        string enteredCriterion = parts[0].Trim();
+                        string? criterionName = availableCriteria.FirstOrDefault(criterion =>
+                            criterion.Equals(enteredCriterion, StringComparison.OrdinalIgnoreCase)
+                        );
+
+                        if (criterionName != null)
+                        {
+                            criterias[criterionName] = parts[1].Trim();
+                            input = "";
+                        }
+                    }
+                }
+            }
+
+            string extras =
+                "Results matching the following criteria:\n"
+                + string.Join("\n", criterias.Select(c => $"{c.Key}: {c.Value}"));
+
+            return new Menu(
+                () => "Search Results",
+                () => SearchByCriteriaResults(garage, criterias),
+                extra: () => extras
+            );
+        }
+
+        private static MenuItem[] SearchByCriteriaResults(
+            Garage garage,
+            Dictionary<string, string> criteria
+        )
+        {
+            var results = new List<MenuItem>();
+
+            foreach (ParkingSpot spot in garage.ParkingSpots)
+            {
+                if (spot.Vehicle is not Vehicle vehicle)
+                    continue;
+
+                bool matches = true;
+
+                foreach (var criterion in criteria)
+                {
+                    string? value = criterion.Key switch
+                    {
+                        "Brand" => vehicle.Brand,
+                        "Color" => vehicle.Color,
+                        "LicensePlateNumber" => vehicle switch
+                        {
+                            Car car => car.LicensePlateNumber,
+                            Bus bus => bus.LicensePlateNumber,
+                            Motorcycle motorcycle => motorcycle.LicensePlateNumber,
+                            _ => null,
+                        },
+                        "FuelType" => vehicle is Car car ? car.FuelType.ToString() : null,
+                        "CylinderVolume" => vehicle is Motorcycle motorcycle
+                            ? motorcycle.CylinderVolume.ToString()
+                            : null,
+                        "Length" => vehicle is Boat boat ? boat.Length.ToString() : null,
+                        "NumberOfEngines" => vehicle is Airplane airplane
+                            ? airplane.NumberOfEngines.ToString()
+                            : null,
+                        _ => null,
+                    };
+
+                    if (
+                        value == null
+                        || !value.Contains(criterion.Value, StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+
+                if (!matches)
+                    continue;
+
+                results.Add(
+                    new MenuItem(
+                        $"{vehicle.Brand} ({vehicle.GetType().Name})",
+                        submenu: EditVehicle(spot)
+                    )
+                );
+            }
+
+            if (results.Count == 0)
+                results.Add(new MenuItem("No matching vehicles found"));
+
+            results.Add(new MenuItem("Back"));
+
+            return [.. results];
+        }
+
+        private static Menu GetAllVehicles(Garage garage)
         {
             return new Menu(
                 () => "Select Vehicle",
@@ -101,7 +406,7 @@ namespace Exercise5.Menus
             );
         }
 
-        private static Menu ParkVehicle(Garage garage)
+        private Menu ParkVehicle(Garage garage)
         {
             return new Menu(
                 () => "Select vehicle type",
@@ -116,7 +421,7 @@ namespace Exercise5.Menus
             );
         }
 
-        private static string? ParkVehicle(Garage garage, VehicleType vehicleType)
+        private string? ParkVehicle(Garage garage, VehicleType vehicleType)
         {
             try
             {
@@ -133,20 +438,7 @@ namespace Exercise5.Menus
             }
         }
 
-        //private static string? ParkVehicle(Garage garage)
-        //{
-        //    try
-        //    {
-        //        Vehicle? vehicle = GetNewVehicle(garage.VehicleType);
-        //        return garage.ParkCar(vehicle);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        return e.Message;
-        //    }
-        //}
-
-        private static Vehicle? GetNewVehicle(VehicleType vehicleType)
+        private Vehicle? GetNewVehicle(VehicleType vehicleType)
         {
             switch (vehicleType)
             {
@@ -155,66 +447,21 @@ namespace Exercise5.Menus
                 case VehicleType.Boat:
                     return Boat.Create();
                 case VehicleType.Bus:
-                    return Bus.Create();
+                    return Bus.Create(_facilities);
                 case VehicleType.Car:
-                    return Car.Create();
+                    return Car.Create(_facilities);
                 case VehicleType.Motorcycle:
-                    return Motorcycle.Create();
+                    return Motorcycle.Create(_facilities);
                 default:
                     return null;
             }
-        }
-
-        private static Menu GetCar(Garage garage)
-        {
-            return new Menu(() => "Find Car", () => GetCarSubMenu(garage));
-        }
-
-        private static MenuItem[] GetCarSubMenu(Garage garage)
-        {
-            var list = new List<MenuItem>
-            {
-                new MenuItem("Choose from List", submenu: ListCars(garage)),
-                new MenuItem("Back"),
-            };
-
-            return [.. list];
-        }
-
-        private static Menu ListCars(Garage garage)
-        {
-            return new Menu(() => "Choose Car", () => ListCarSubMenu(garage));
-        }
-
-        private static MenuItem[] ListCarSubMenu(Garage garage)
-        {
-            var list = new List<MenuItem>();
-
-            ParkingSpot[] occupiedSpots = garage.GetAllOccupiesSpots();
-
-            foreach (ParkingSpot parkingSpot in occupiedSpots)
-            {
-                if (parkingSpot.Vehicle is Vehicle vehicle)
-                {
-                    list.Add(
-                        new MenuItem(
-                            $"{parkingSpot.Vehicle.Brand}",
-                            submenu: EditVehicle(parkingSpot)
-                        )
-                    );
-                }
-            }
-
-            list.Add(new MenuItem("Back"));
-
-            return [.. list];
         }
 
         private static Menu EditVehicle(ParkingSpot parkingSpot)
         {
             return new Menu(
                 () => GetVehicleHeader(parkingSpot.Vehicle!),
-                () => EditVehicleSubMenu(parkingSpot.Vehicle!),
+                () => EditVehicleSubMenu(parkingSpot),
                 extra: () => GetStats(parkingSpot)
             );
         }
@@ -227,6 +474,7 @@ namespace Exercise5.Menus
                 case Car car:
                     sb.AppendLine($"Brand: {car.Brand}");
                     sb.AppendLine($"License plate: {car.LicensePlateNumber}");
+                    sb.AppendLine($"Fuel type: {car.FuelType}");
                     sb.AppendLine($"Color: {car.Color}");
                     sb.Append($"ParkingSpot nr: {parkingSpot.Id}");
                     break;
@@ -242,14 +490,14 @@ namespace Exercise5.Menus
                 case Motorcycle motorcycle:
                     sb.AppendLine($"Brand: {motorcycle.Brand}");
                     sb.AppendLine($"License plate: {motorcycle.LicensePlateNumber}");
-                    sb.AppendLine($"Engine volume: {motorcycle.CylinderVolume}");
+                    sb.AppendLine($"Engine volume: {motorcycle.CylinderVolume}cc");
                     sb.AppendLine($"Color: {motorcycle.Color}");
                     sb.Append($"ParkingSpot nr: {parkingSpot.Id}");
                     break;
 
                 case Boat boat:
                     sb.AppendLine($"Brand: {boat.Brand}");
-                    sb.AppendLine($"Length: {boat.Length}");
+                    sb.AppendLine($"Length: {boat.Length}m");
                     sb.AppendLine($"Color: {boat.Color}");
                     sb.Append($"ParkingSpot nr: {parkingSpot.Id}");
                     break;
@@ -292,19 +540,29 @@ namespace Exercise5.Menus
             return sb.ToString().TrimEnd();
         }
 
-        private static MenuItem[] EditVehicleSubMenu(Vehicle vehicle)
+        private static MenuItem[] EditVehicleSubMenu(ParkingSpot spot)
         {
             return
             [
                 new MenuItem(
+                    "Remove vehicle",
+                    action: () =>
+                    {
+                        spot.RemoveVehicle();
+                        return "Vehicle removed";
+                    },
+                    backUpWhenDone: true
+                ),
+                new MenuItem(
                     "Change Brand",
-                    action: () => EditVehicleProperty(value => vehicle.Brand = value, "brand name")
+                    action: () =>
+                        EditVehicleProperty(value => spot.Vehicle!.Brand = value, "brand name")
                 ),
                 new MenuItem(
                     "Change Color",
-                    action: () => EditVehicleProperty(value => vehicle.Color = value, "color")
+                    action: () => EditVehicleProperty(value => spot.Vehicle!.Color = value, "color")
                 ),
-                .. GetVehicleSpecificMenuItems(vehicle),
+                .. GetVehicleSpecificMenuItems(spot.Vehicle!),
                 new MenuItem("Back"),
             ];
         }
@@ -373,7 +631,14 @@ namespace Exercise5.Menus
 
                 Airplane airplane =>
                 [
-                    // Flygplanets specifika menyval
+                    new MenuItem(
+                        "Change number of engines",
+                        action: () =>
+                            EditVehicleProperty(
+                                value => airplane.NumberOfEngines = value,
+                                "number of engines"
+                            )
+                    ),
                 ],
 
                 _ => [],
@@ -439,48 +704,6 @@ namespace Exercise5.Menus
 
             Console.ReadKey();
             return null;
-        }
-
-        private static string? ParkCar(Garage garage)
-        {
-            try
-            {
-                Car car = CreateCar();
-                string? message = garage.ParkCar(car);
-
-                return message;
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }
-
-        private static Car CreateCar()
-        {
-            Console.Clear();
-
-            Console.WriteLine("What is the car's brand? (e.g. Volvo or Ford) Leave empty to exit");
-            string? brand = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(brand))
-                throw new OperationCanceledException("Parking Car Aborted");
-
-            Console.WriteLine(
-                "What is the car's registration number? (e.g. ABC123 or ABC12D) Leave empty to exit"
-            );
-            string? registrationNumber = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(registrationNumber))
-                throw new OperationCanceledException("Parking Car Aborted");
-
-            Console.WriteLine("What color is the car? Leave empty to exit");
-            string? color = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(color))
-                throw new OperationCanceledException("Parking Car Aborted");
-
-            return new Car(brand, registrationNumber, color);
         }
 
         private MenuItem[] GetMainMenuItems()
@@ -555,62 +778,6 @@ namespace Exercise5.Menus
                 new MenuItem("Back"),
             ];
         }
-
-        //private string? CreateFacility(GarageType type)
-        //{
-        //    switch (type)
-        //    {
-        //        case GarageType.CarGarage:
-        //            CreateCarGarage();
-        //            break;
-        //        case GarageType.Marina:
-        //            CreateMarina();
-        //            break;
-        //        case GarageType.Hangar:
-        //            break;
-        //        case GarageType.MCGarage:
-        //            break;
-        //    }
-        //    return null;
-        //}
-
-        //private void CreateMarina()
-        //{
-        //    Console.Clear();
-        //    string? name;
-        //    while (true)
-        //    {
-        //        name = GetFacilityName(GarageType.Marina);
-
-        //        if (name == null)
-        //        {
-        //            return;
-        //        }
-        //        break;
-        //    }
-
-        //    while (true)
-        //    {
-        //        Console.WriteLine(
-        //            "How many parking spaces are there in the garage? (Empty row to abort)"
-        //        );
-        //        string? input = Console.ReadLine();
-
-        //        if (int.TryParse(input, out int value) && value > 0)
-        //        {
-        //            _facilities.Add(new Marina(name, value));
-        //            break;
-        //        }
-        //        else if (string.IsNullOrEmpty(input))
-        //        {
-        //            break;
-        //        }
-
-        //        Console.WriteLine(
-        //            "Please enter a valid number of parking spaces greater than 0. (Empty row to abort)"
-        //        );
-        //    }
-        //}
 
         private string? CreateFacility(GarageType garageType)
         {

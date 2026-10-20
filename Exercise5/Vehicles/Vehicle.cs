@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Exercise5.Facilities;
 
 namespace Exercise5.Vehicles
 {
@@ -12,8 +14,6 @@ namespace Exercise5.Vehicles
     [JsonDerivedType(typeof(Motorcycle), "Motorcycle")]
     public class Vehicle(string brand, string color)
     {
-        //public int Weight { get; set; }
-        //public int Seats { get; set; }
         public string Color { get; set; } = IsValidInput(color, "Color");
         public string Brand
         {
@@ -41,12 +41,62 @@ namespace Exercise5.Vehicles
             return (brand, color);
         }
 
-        protected static string? ReadInput(string prompt)
+        protected static string? ReadInput(string prompt, bool skip = false)
         {
-            Console.WriteLine($"{prompt} Leave empty to exit");
+            Console.Write($"{prompt}");
+            if (!skip)
+                Console.Write(" Leave empty to exit\n");
+
             string? input = Console.ReadLine();
 
             return string.IsNullOrWhiteSpace(input) ? null : input;
         }
+
+        public static string ValidateLicensePlateNumber(string registratíonNumber)
+        {
+            string pattern = @"^[A-HJ-PR-UW-Z]{3}\s?[0-9]{2}[A-HJ-PR-UW-Z0-9]$";
+            Regex regex = new(pattern, RegexOptions.IgnoreCase);
+
+            if (string.IsNullOrEmpty(registratíonNumber) || !regex.IsMatch(registratíonNumber))
+                throw new ArgumentException("Licence plate number is not valid");
+
+            return registratíonNumber.ToUpper();
+        }
+
+        internal static string ValidateLicensePlateNumber(
+            string registratíonNumber,
+            List<Garage> facilities
+        )
+        {
+            string validatedNumber = ValidateLicensePlateNumber(registratíonNumber);
+
+            foreach (Garage facility in facilities)
+            {
+                foreach (ParkingSpot parkingSpot in facility.ParkingSpots)
+                {
+                    string? existingNumber = parkingSpot.Vehicle switch
+                    {
+                        Car car => car.LicensePlateNumber,
+                        Bus bus => bus.LicensePlateNumber,
+                        Motorcycle motorcycle => motorcycle.LicensePlateNumber,
+                        _ => null,
+                    };
+
+                    if (existingNumber?.Equals(
+                            validatedNumber,
+                            StringComparison.OrdinalIgnoreCase
+                        ) == true
+                    )
+                    {
+                        throw new ArgumentException(
+                            "A vehicle with that license plate already exists"
+                        );
+                    }
+                }
+            }
+
+            return validatedNumber;
+        }
+
     }
 }

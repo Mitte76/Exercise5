@@ -5,11 +5,9 @@ using Exercise5.Vehicles;
 
 namespace Exercise5.Facilities
 {
-    public class ParkingSpot
+    public class ParkingSpot(int id)
     {
-        private static int nextId;
-
-        public int Id { get; } = Interlocked.Increment(ref nextId);
+        public int Id { get; } = id;
 
         public bool IsOccupied => Vehicle != null;
 
@@ -19,6 +17,11 @@ namespace Exercise5.Facilities
         public void AddVehicle(Vehicle vehicle)
         {
             Vehicle = vehicle;
+        }
+
+        public void RemoveVehicle()
+        {
+            Vehicle = null;
         }
     }
 }

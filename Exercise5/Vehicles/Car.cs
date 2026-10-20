@@ -1,30 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Exercise5.Facilities;
 
 namespace Exercise5.Vehicles
 {
     [Serializable()]
-    internal class Car(string brand, string color, string licensePlateNumber)
+    internal class Car(string brand, string color, string licensePlateNumber, FuelType fuelType)
         : Vehicle(brand, color)
     {
+        public FuelType FuelType { get; set; } = fuelType;
+
         public string LicensePlateNumber
         {
             get;
             set => field = ValidateLicensePlateNumber(value);
         } = ValidateLicensePlateNumber(licensePlateNumber);
 
-        public static string ValidateLicensePlateNumber(string registratíonNumber)
-        {
-            string pattern = @"^[A-HJ-PR-UW-Z]{3}\s?[0-9]{2}[A-HJ-PR-UW-Z0-9]$";
-            Regex regex = new(pattern, RegexOptions.IgnoreCase);
-
-            if (string.IsNullOrEmpty(registratíonNumber) || !regex.IsMatch(registratíonNumber))
-                throw new ArgumentException("Licence plate number is not valid");
-
-            return registratíonNumber.ToUpper();
-        }
-
-        public static Car Create()
+        public static Car Create(List<Garage> facilities)
         {
             var (brand, color) = GetCommonProperties("Car");
 
@@ -32,7 +25,25 @@ namespace Exercise5.Vehicles
             if (licensePlate == null)
                 throw new OperationCanceledException("Adding Car Aborted");
 
-            return new Car(brand, color, licensePlate);
+            licensePlate = ValidateLicensePlateNumber(licensePlate, facilities);
+
+            FuelType fuelType = ReadInput(
+                "Select fuel type:\n1. Diesel\n2. Gasoline\n",
+                true
+            ) switch
+            {
+                "1" => FuelType.Diesel,
+                "2" => FuelType.Gasoline,
+                _ => throw new ArgumentException("Invalid fuel type"),
+            };
+
+            return new Car(brand, color, licensePlate, fuelType);
         }
+    }
+
+    public enum FuelType
+    {
+        Diesel,
+        Gasoline,
     }
 }

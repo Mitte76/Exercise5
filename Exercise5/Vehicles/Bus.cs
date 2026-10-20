@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Exercise5.Facilities;
 
 namespace Exercise5.Vehicles
 {
@@ -8,18 +10,20 @@ namespace Exercise5.Vehicles
         public string LicensePlateNumber
         {
             get;
-            set => field = Car.ValidateLicensePlateNumber(value);
-        } = Car.ValidateLicensePlateNumber(licensePlateNumber);
+            set => field = ValidateLicensePlateNumber(value);
+        } = ValidateLicensePlateNumber(licensePlateNumber);
 
         public int NumberOfSeats { get; set; } = numberOfSeats;
 
-        public static Bus Create()
+        public static Bus Create(List<Garage> facilities)
         {
             var (brand, color) = GetCommonProperties("Bus");
 
             string? licensePlate = ReadInput("Enter license plate (e.g. ABC123 or ABC12D):");
             if (licensePlate == null)
                 throw new OperationCanceledException("Adding Bus aborted");
+
+            licensePlate = ValidateLicensePlateNumber(licensePlate, facilities);
 
             string? amountIn = ReadInput("Enter amount of seats:");
             if (amountIn == null)

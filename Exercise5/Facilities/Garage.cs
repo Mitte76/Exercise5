@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Exercise5.Vehicles;
@@ -15,8 +16,8 @@ namespace Exercise5.Facilities
         public abstract VehicleType[] VehicleTypes { get; }
         public int Capacity => ParkingSpots.Length;
         private ParkingSpot[] parkingSpots = Enumerable
-            .Range(0, capacity)
-            .Select(_ => new ParkingSpot())
+            .Range(1, capacity)
+            .Select(id => new ParkingSpot(id))
             .ToArray();
 
         [JsonInclude]
@@ -28,6 +29,36 @@ namespace Exercise5.Facilities
         public int OccupiedSlots => ParkingSpots.Count(p => p.IsOccupied);
         public int AvailableSlots => ParkingSpots.Count(p => !p.IsOccupied);
 
+        public Dictionary<VehicleType, int> GetVehicleTypeCounts()
+        {
+            var counts = new Dictionary<VehicleType, int>();
+
+            foreach (VehicleType type in VehicleTypes)
+            {
+                counts[type] = 0;
+            }
+
+            foreach (ParkingSpot parkingSpot in ParkingSpots)
+            {
+                if (parkingSpot.Vehicle is null)
+                    continue;
+
+                VehicleType type = parkingSpot.Vehicle switch
+                {
+                    Car => VehicleType.Car,
+                    Bus => VehicleType.Bus,
+                    Motorcycle => VehicleType.Motorcycle,
+                    Boat => VehicleType.Boat,
+                    Airplane => VehicleType.Airplane,
+                    _ => throw new ArgumentOutOfRangeException(),
+                };
+
+                counts[type]++;
+            }
+
+            return counts;
+        }
+
         public void GetFirstAvailableParkignSpot()
         {
             ParkingSpot? spot = parkingSpots.FirstOrDefault(p => !p.IsOccupied);
@@ -38,8 +69,6 @@ namespace Exercise5.Facilities
             ParkingSpot[] occupiedSpots = [.. parkingSpots.Where(p => p.IsOccupied)];
             return occupiedSpots;
         }
-
-        public abstract string? PrintAvailableSlots();
 
         public string Name { get; private set; } = name;
 
