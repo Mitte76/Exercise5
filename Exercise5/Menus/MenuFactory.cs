@@ -1,28 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Exercise5.Data;
 using Exercise5.Facilities;
 using Exercise5.Vehicles;
 
 namespace Exercise5.Menus
 {
-    internal class MenuFactory
+    internal class MenuFactory(List<Garage> facilities)
     {
-        private readonly List<Garage> _facilities;
-
-        public MenuFactory(List<Garage> facilities)
-        {
-            _facilities = facilities ?? new List<Garage>();
-        }
+        private readonly List<Garage> _facilities = facilities ?? [];
 
         public Menu CreateMainMenu()
         {
-            return new Menu("Main Menu", GetMainMenuItems, isMainMenu: true);
+            return new Menu(() => "Main Menu", GetMainMenuItems, isMainMenu: true);
         }
 
         private Menu OpenFacility()
         {
-            return new Menu("Available Facilities", GetAvailableFacilities);
+            return new Menu(() => "Available Facilities", GetAvailableFacilities);
         }
 
         private MenuItem[] GetAvailableFacilities()
@@ -47,19 +43,199 @@ namespace Exercise5.Menus
 
         private Menu GarageMenu(Garage garage)
         {
-            return new Menu($"Garage: {garage.Name}", () => GarageSubMenus(garage));
+            return new Menu(() => $"Garage: {garage.Name}", () => GarageSubMenus(garage));
         }
 
-        private MenuItem[] GarageSubMenus(Garage garage)
+        private static MenuItem[] GarageSubMenus(Garage garage)
         {
             var list = new List<MenuItem>
             {
                 new MenuItem("Check Availability", action: () => garage.PrintAvailableSlots()),
+                new MenuItem("Get Car", submenu: GetCar(garage)),
                 new MenuItem("Park Car", action: () => ParkCar(garage)),
                 new MenuItem("Back"),
             };
 
-            return list.ToArray();
+            return [.. list];
+        }
+
+        private static Menu GetCar(Garage garage)
+        {
+            return new Menu(() => "Find Car", () => GetCarSubMenu(garage));
+        }
+
+        private static MenuItem[] GetCarSubMenu(Garage garage)
+        {
+            var list = new List<MenuItem>
+            {
+                new MenuItem("Choose from List", submenu: ListCars(garage)),
+                new MenuItem("Back"),
+            };
+
+            return [.. list];
+        }
+
+        private static Menu ListCars(Garage garage)
+        {
+            return new Menu(() => "Choose Car", () => ListCarSubMenu(garage));
+        }
+
+        private static MenuItem[] ListCarSubMenu(Garage garage)
+        {
+            var list = new List<MenuItem>();
+
+            ParkingSpot[] occupiedSpots = garage.GetAllOccupiesSpots();
+
+            foreach (ParkingSpot parkingSpot in occupiedSpots)
+            {
+                if (parkingSpot.Vehicle is Vehicle vehicle)
+                {
+                    list.Add(
+                        new MenuItem($"{parkingSpot.Vehicle.Brand}", submenu: EditVehicle(vehicle))
+                    );
+                }
+            }
+
+            list.Add(new MenuItem("Back"));
+
+            return [.. list];
+        }
+
+        private static Menu EditVehicle(Vehicle vehicle)
+        {
+            return new Menu(() => GetVehicleHeader(vehicle), () => EditVehicleSubMenu(vehicle));
+        }
+
+        private static string GetVehicleHeader(Vehicle vehicle)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append($"{vehicle.Brand} ");
+
+            switch (vehicle)
+            {
+                case Car car:
+                    sb.Append($"{car.LicensePlateNumber} ");
+                    break;
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
+        private static MenuItem[] EditVehicleSubMenu(Vehicle vehicle)
+        {
+            return
+            [
+                new MenuItem(
+                    "Change Brand",
+                    action: () => EditVehicleProperty(value => vehicle.Brand = value, "brand name")
+                ),
+                .. GetVehicleSpecificMenuItems(vehicle),
+                new MenuItem("Back"),
+            ];
+        }
+
+        private static MenuItem[] GetVehicleSpecificMenuItems(Vehicle vehicle)
+        {
+            return vehicle switch
+            {
+                Car car =>
+                [
+                    new MenuItem(
+                        "Change License Plate Number",
+                        action: () =>
+                            EditVehicleProperty(
+                                value => car.LicensePlateNumber = value,
+                                "license plate number"
+                            )
+                    ),
+                ],
+
+                Boat boat =>
+                [
+                    new MenuItem(
+                        "Change Length",
+                        action: () => EditVehicleProperty(value => boat.Length = value, "Length")
+                    ),
+                ],
+
+                Bus bus =>
+                [
+                    // Bussens specifika menyval
+                ],
+
+                Motorcycle motorcycle =>
+                [
+                    // Motorcykelns specifika menyval
+                ],
+
+                Airplane airplane =>
+                [
+                    // Flygplanets specifika menyval
+                ],
+
+                _ => [],
+            };
+        }
+
+        private static string? EditVehicleProperty(Action<int> update, string propertyName)
+        {
+            Console.WriteLine($"Enter new {propertyName}. Leave empty to exit");
+            string? input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return $"Changing {propertyName} aborted";
+
+            if (!int.TryParse(input, out int value))
+                return $"Invalid {propertyName}. Please enter a number.";
+
+            try
+            {
+                update(value);
+                return $"{propertyName} updated successfully";
+            }
+            catch (Exception e)
+            {
+                return e.Message;
+            }
+        }
+
+        private static string? EditVehicleProperty(Action<string> update, string propertyName)
+        {
+            Console.WriteLine($"Enter new {propertyName}. Leave empty to exit");
+            string? value = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(value))
+                return $"Changing {propertyName} aborted";
+
+            try
+            {
+                update(value);
+                return $"{propertyName} updated successfully";
+            }
+            catch (Exception e)
+            {
+                return e.Message;
+            }
+        }
+
+        private static string? ShowAllCars(Garage garage)
+        {
+            ParkingSpot[] occupiedSpots = garage.GetAllOccupiesSpots();
+
+            foreach (ParkingSpot parkingSpot in occupiedSpots)
+            {
+                if (parkingSpot.Vehicle is Car car)
+                {
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine($"ParkingSpot: {parkingSpot.Id}");
+                    sb.AppendLine($"Brand: {car.Brand}");
+                    sb.AppendLine($"License Plate Number: {car.LicensePlateNumber.ToUpper()}");
+                    Console.WriteLine(sb.ToString());
+                }
+            }
+
+            Console.ReadKey();
+            return null;
         }
 
         private static string? ParkCar(Garage garage)
@@ -71,7 +247,7 @@ namespace Exercise5.Menus
 
                 return message;
             }
-            catch (ArgumentException ex)
+            catch (Exception ex)
             {
                 return ex.Message;
             }
@@ -80,6 +256,12 @@ namespace Exercise5.Menus
         private static Car CreateCar()
         {
             Console.Clear();
+
+            Console.WriteLine("What is the car's brand? (e.g. Volvo or Ford) Leave empty to exit");
+            string? brand = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(brand))
+                throw new OperationCanceledException("Parking Car Aborted");
 
             Console.WriteLine(
                 "What is the car's registration number? (e.g. ABC123 or ABC12D) Leave empty to exit"
@@ -95,22 +277,25 @@ namespace Exercise5.Menus
             if (string.IsNullOrWhiteSpace(color))
                 throw new OperationCanceledException("Parking Car Aborted");
 
-            return new Car(registrationNumber, color);
+            return new Car(brand, registrationNumber, color);
         }
 
         private MenuItem[] GetMainMenuItems()
         {
             var list = new List<MenuItem>();
 
-            list.Add(new MenuItem("Add Facility", submenu: CreateFacilityMenu()));
-
             if (_facilities.Count > 0)
             {
-                list.Add(new MenuItem("Select Facilitity", submenu: OpenFacility()));
+                list.Add(new MenuItem("Open Facilitity", submenu: OpenFacility()));
             }
 
+            list.Add(new MenuItem("Add Facility", submenu: CreateFacilityMenu()));
+
             list.Add(
-                new MenuItem("Load/Save Data", submenu: new Menu("Main Menu", GetDatabaseOptions))
+                new MenuItem(
+                    "Load/Save Data",
+                    submenu: new Menu(() => "Main Menu", GetDatabaseOptions)
+                )
             );
 
             list.Add(new MenuItem("Exit"));
@@ -123,7 +308,7 @@ namespace Exercise5.Menus
             {
                 new MenuItem(
                     "Load from File",
-                    submenu: new Menu("Available backups", GetBackupMenuItems)
+                    submenu: new Menu(() => "Available backups", GetBackupMenuItems)
                 ),
                 new MenuItem(
                     "Save to File",
@@ -153,7 +338,7 @@ namespace Exercise5.Menus
 
         private Menu CreateFacilityMenu()
         {
-            return new Menu("Add Facility", GetFacilityMenuItems);
+            return new Menu(() => "Add Facility", GetFacilityMenuItems);
         }
 
         private MenuItem[] GetFacilityMenuItems()

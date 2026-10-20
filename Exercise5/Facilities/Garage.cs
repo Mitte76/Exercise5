@@ -32,6 +32,12 @@ namespace Exercise5.Facilities
             ParkingSpot? spot = parkingSpots.FirstOrDefault(p => !p.IsOccupied);
         }
 
+        public ParkingSpot[] GetAllOccupiesSpots()
+        {
+            ParkingSpot[] occupiedSpots = [.. parkingSpots.Where(p => p.IsOccupied)];
+            return occupiedSpots;
+        }
+
         public abstract string? PrintAvailableSlots();
 
         public string Name { get; private set; } = name;

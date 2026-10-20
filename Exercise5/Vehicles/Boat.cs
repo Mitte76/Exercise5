@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Exercise5.Vehicles
 {
-    internal class Boat(decimal length, string color) : Vehicle(color)
+    internal class Boat(string brand, decimal length, string color) : Vehicle(brand, color)
     {
         public decimal Length { get; set; } = length;
     }

@@ -3,9 +3,10 @@ using System.Threading.Tasks;
 
 namespace Exercise5.Menus
 {
-    public class Menu(string menuName, Func<MenuItem[]> menuItems, bool isMainMenu = false)
+    public class Menu(Func<string> menuName, Func<MenuItem[]> menuItems, bool isMainMenu = false)
     {
-        private readonly string _menuName = menuName;
+        //private readonly string _menuName = menuName;
+        private readonly Func<string> _menuName = menuName;
 
         private readonly Func<MenuItem[]> _items = menuItems;
 
@@ -26,7 +27,7 @@ namespace Exercise5.Menus
 
                 if (HandleInput(Console.ReadKey(true), items, selectedIndex, out selectedIndex))
                 {
-                    if (selectedIndex == -1)
+                    if (selectedIndex == -1 || items == null)
                         return false;
 
                     MenuItem selected = items[selectedIndex];
@@ -34,6 +35,7 @@ namespace Exercise5.Menus
                     if (selected.Submenu != null)
                     {
                         await selected.Submenu.ShowMenu();
+                        selectedIndex = 0;
                         continue;
                     }
 
@@ -63,7 +65,8 @@ namespace Exercise5.Menus
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Green;
 
-            string title = _menuName;
+            //string title = _menuName;
+            string title = _menuName();
             string border = new('*', title.Length + 8);
 
             Console.WriteLine($"{border}\n*   {title}   *\n{border}");
@@ -72,13 +75,13 @@ namespace Exercise5.Menus
 
             Console.WriteLine($"{message}\n");
             Console.ResetColor();
-
-            for (int i = 0; i < items.Length; i++)
-            {
-                bool selected = i == selectedIndex;
-                int menuNumber = (i + 1) % items.Length;
-                PrintMenuItem(menuNumber, items[i].Text, selected);
-            }
+            if (items != null)
+                for (int i = 0; i < items.Length; i++)
+                {
+                    bool selected = i == selectedIndex;
+                    int menuNumber = (i + 1) % items.Length;
+                    PrintMenuItem(menuNumber, items[i].Text, selected);
+                }
 
             Console.Write(currentInput);
         }
@@ -137,6 +140,7 @@ namespace Exercise5.Menus
                     )
                     {
                         selectedIndex = currentNumber - 1;
+                        currentInput = "";
                     }
 
                     return true;

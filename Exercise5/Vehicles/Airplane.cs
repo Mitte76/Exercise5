@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Exercise5.Vehicles
 {
-    internal class Airplane(int numberOfEngines, string color) : Vehicle(color)
+    internal class Airplane(string brand, int numberOfEngines, string color) : Vehicle(brand, color)
     {
         public int NumberOfEngines { get; set; } = numberOfEngines;
     }

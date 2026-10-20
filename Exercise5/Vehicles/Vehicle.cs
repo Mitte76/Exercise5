@@ -10,16 +10,21 @@ namespace Exercise5.Vehicles
     [JsonDerivedType(typeof(Bus), "Bus")]
     [JsonDerivedType(typeof(Car), "Car")]
     [JsonDerivedType(typeof(Motorcycle), "Motorcycle")]
-    public class Vehicle(string color)
+    public class Vehicle(string brand, string color)
     {
         public int Weight { get; set; }
         public int Seats { get; set; }
-        public string Color { get; set; } = IsValidColor(color);
+        public string Color { get; set; } = IsValidInput(color, "Color");
+        public string Brand
+        {
+            get;
+            set => field = IsValidInput(value, "Brand");
+        } = IsValidInput(brand, "Brand");
 
-        private static string IsValidColor(string color)
+        private static string IsValidInput(string color, string property)
         {
             if (!Regex.IsMatch(color, @"^[\p{L}]+$"))
-                throw new ArgumentException("Invalid color");
+                throw new ArgumentException($"Invalid {property}");
             return color;
         }
     }
