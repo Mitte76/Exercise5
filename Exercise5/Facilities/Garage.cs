@@ -12,6 +12,7 @@ namespace Exercise5.Facilities
     [JsonDerivedType(typeof(MCGarage), "MCGarage")]
     internal abstract class Garage(string name, int capacity)
     {
+        public abstract VehicleType[] VehicleTypes { get; }
         public int Capacity => ParkingSpots.Length;
         private ParkingSpot[] parkingSpots = Enumerable
             .Range(0, capacity)

@@ -3,9 +3,13 @@ using System.Threading.Tasks;
 
 namespace Exercise5.Menus
 {
-    public class Menu(Func<string> menuName, Func<MenuItem[]> menuItems, bool isMainMenu = false)
+    public class Menu(
+        Func<string> menuName,
+        Func<MenuItem[]> menuItems,
+        bool isMainMenu = false,
+        Func<string>? extra = null
+    )
     {
-        //private readonly string _menuName = menuName;
         private readonly Func<string> _menuName = menuName;
 
         private readonly Func<MenuItem[]> _items = menuItems;
@@ -14,6 +18,7 @@ namespace Exercise5.Menus
 
         private string currentInput = "";
         private string? _message;
+        private readonly Func<string>? _extra = extra;
 
         public async Task<bool> ShowMenu()
         {
@@ -22,7 +27,7 @@ namespace Exercise5.Menus
             while (true)
             {
                 MenuItem[] items = _items();
-                ShowMainMenu(items, selectedIndex, _message);
+                ShowMainMenu(items, selectedIndex, _message, _extra?.Invoke());
                 _message = null;
 
                 if (HandleInput(Console.ReadKey(true), items, selectedIndex, out selectedIndex))
@@ -60,16 +65,22 @@ namespace Exercise5.Menus
             }
         }
 
-        public void ShowMainMenu(MenuItem[] items, int selectedIndex, string? message)
+        public void ShowMainMenu(
+            MenuItem[] items,
+            int selectedIndex,
+            string? message,
+            string? extra
+        )
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Green;
 
-            //string title = _menuName;
             string title = _menuName();
             string border = new('*', title.Length + 8);
 
             Console.WriteLine($"{border}\n*   {title}   *\n{border}");
+            if (extra != null)
+                Console.WriteLine($"\n{extra}");
 
             Console.ForegroundColor = ConsoleColor.Blue;
 

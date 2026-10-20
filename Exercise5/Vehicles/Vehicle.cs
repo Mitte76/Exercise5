@@ -12,8 +12,8 @@ namespace Exercise5.Vehicles
     [JsonDerivedType(typeof(Motorcycle), "Motorcycle")]
     public class Vehicle(string brand, string color)
     {
-        public int Weight { get; set; }
-        public int Seats { get; set; }
+        //public int Weight { get; set; }
+        //public int Seats { get; set; }
         public string Color { get; set; } = IsValidInput(color, "Color");
         public string Brand
         {
@@ -26,6 +26,27 @@ namespace Exercise5.Vehicles
             if (!Regex.IsMatch(color, @"^[\p{L}]+$"))
                 throw new ArgumentException($"Invalid {property}");
             return color;
+        }
+
+        protected static (string Brand, string Color) GetCommonProperties(string type)
+        {
+            string? brand = ReadInput("Enter brand:");
+            if (brand == null)
+                throw new OperationCanceledException($"Adding {type} aborted");
+
+            string? color = ReadInput("Enter color:");
+            if (color == null)
+                throw new OperationCanceledException($"Adding {type} aborted");
+
+            return (brand, color);
+        }
+
+        protected static string? ReadInput(string prompt)
+        {
+            Console.WriteLine($"{prompt} Leave empty to exit");
+            string? input = Console.ReadLine();
+
+            return string.IsNullOrWhiteSpace(input) ? null : input;
         }
     }
 }

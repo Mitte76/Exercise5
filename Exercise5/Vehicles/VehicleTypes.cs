@@ -6,7 +6,7 @@ namespace Exercise5.Vehicles
 {
     public enum VehicleType
     {
-        AirPlane,
+        Airplane,
         Boat,
         Bus,
         Car,
