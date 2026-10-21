@@ -11,14 +11,30 @@ namespace Exercise5.Facilities
     [JsonDerivedType(typeof(Hangar), "Hangar")]
     [JsonDerivedType(typeof(Marina), "Marina")]
     [JsonDerivedType(typeof(MCGarage), "MCGarage")]
-    internal abstract class Garage(string name, int capacity)
+    internal abstract class Garage
     {
         public abstract VehicleType[] VehicleTypes { get; }
-        public int Capacity => ParkingSpots.Length;
-        private ParkingSpot[] parkingSpots = Enumerable
-            .Range(1, capacity)
-            .Select(id => new ParkingSpot(id))
-            .ToArray();
+
+        public string Name { get; private set; }
+        public int Capacity => parkingSpots.Length;
+
+        public int OccupiedSlots => parkingSpots.Count(p => p.IsOccupied);
+
+        public int AvailableSlots => parkingSpots.Count(p => !p.IsOccupied);
+
+        private ParkingSpot[] parkingSpots;
+
+        protected Garage(string name, int capacity)
+        {
+            parkingSpots = new ParkingSpot[capacity];
+
+            for (int i = 0; i < capacity; i++)
+            {
+                parkingSpots[i] = new ParkingSpot(i + 1);
+            }
+
+            Name = name;
+        }
 
         [JsonInclude]
         public ParkingSpot[] ParkingSpots
@@ -26,8 +42,6 @@ namespace Exercise5.Facilities
             get => parkingSpots;
             private set => parkingSpots = value;
         }
-        public int OccupiedSlots => ParkingSpots.Count(p => p.IsOccupied);
-        public int AvailableSlots => ParkingSpots.Count(p => !p.IsOccupied);
 
         public Dictionary<VehicleType, int> GetVehicleTypeCounts()
         {
@@ -69,8 +83,6 @@ namespace Exercise5.Facilities
             ParkingSpot[] occupiedSpots = [.. parkingSpots.Where(p => p.IsOccupied)];
             return occupiedSpots;
         }
-
-        public string Name { get; private set; } = name;
 
         public string ParkCar(Vehicle vehicle)
         {
