@@ -185,9 +185,6 @@ namespace Exercise5.Menus
                 );
             }
 
-            //if (vehicles.Count == 0)
-            //    vehicles.Add(new MenuItem("No matching vehicles found"));
-
             vehicles.Add(new MenuItem("Back"));
 
             return [.. vehicles];
@@ -369,40 +366,74 @@ namespace Exercise5.Menus
 
         private static Menu GetAllVehicles(Garage garage)
         {
+            int currentPage = 0;
+            int totalPages = 1;
+            const int pageSize = 20;
+
             return new Menu(
                 () => "Select Vehicle",
                 () =>
                 {
-                    var vehicles = new List<MenuItem>();
+                    var allVehicles = garage
+                        .ParkingSpots.Where(spot =>
+                            spot.Vehicle is Vehicle vehicle
+                            && vehicle switch
+                            {
+                                Car => garage.VehicleTypes.Contains(VehicleType.Car),
+                                Bus => garage.VehicleTypes.Contains(VehicleType.Bus),
+                                Motorcycle => garage.VehicleTypes.Contains(VehicleType.Motorcycle),
+                                Boat => garage.VehicleTypes.Contains(VehicleType.Boat),
+                                Airplane => garage.VehicleTypes.Contains(VehicleType.Airplane),
+                                _ => false,
+                            }
+                        )
+                        .Select(spot => (Spot: spot, Vehicle: spot.Vehicle!))
+                        .ToArray();
 
-                    foreach (ParkingSpot spot in garage.ParkingSpots)
-                    {
-                        if (spot.Vehicle is not Vehicle vehicle)
-                            continue;
+                    totalPages = Math.Max(
+                        1,
+                        (int)Math.Ceiling(allVehicles.Length / (double)pageSize)
+                    );
+                    currentPage = Math.Clamp(currentPage, 0, totalPages - 1);
 
-                        bool isAllowed = vehicle switch
-                        {
-                            Car => garage.VehicleTypes.Contains(VehicleType.Car),
-                            Bus => garage.VehicleTypes.Contains(VehicleType.Bus),
-                            Motorcycle => garage.VehicleTypes.Contains(VehicleType.Motorcycle),
-                            Boat => garage.VehicleTypes.Contains(VehicleType.Boat),
-                            Airplane => garage.VehicleTypes.Contains(VehicleType.Airplane),
-                            _ => false,
-                        };
+                    var items = allVehicles
+                        .Skip(currentPage * pageSize)
+                        .Take(pageSize)
+                        .Select(item => new MenuItem(
+                            $"{item.Vehicle.Brand} ({item.Vehicle.GetType().Name})",
+                            submenu: EditVehicle(item.Spot)
+                        ))
+                        .ToList();
 
-                        if (!isAllowed)
-                            continue;
-
-                        vehicles.Add(
+                    if (currentPage > 0)
+                        items.Add(
                             new MenuItem(
-                                $"{vehicle.Brand} ({vehicle.GetType().Name})",
-                                submenu: EditVehicle(spot)
+                                "Previous page",
+                                action: () =>
+                                {
+                                    currentPage--;
+                                    return null;
+                                }
                             )
                         );
-                    }
 
-                    return [.. vehicles, new MenuItem("Back")];
-                }
+                    if (currentPage < totalPages - 1)
+                        items.Add(
+                            new MenuItem(
+                                "Next page",
+                                action: () =>
+                                {
+                                    currentPage++;
+                                    return null;
+                                }
+                            )
+                        );
+
+                    items.Add(new MenuItem("Back"));
+
+                    return [.. items];
+                },
+                extra: () => $"Page {currentPage + 1} of {totalPages}"
             );
         }
 
